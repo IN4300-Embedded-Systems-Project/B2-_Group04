@@ -1,4 +1,6 @@
 import 'package:air_quality_iot_app/const/colors.dart';
+import 'package:air_quality_iot_app/features/home_screen/views/tvoc_dashboard.dart';
+// import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:air_quality_iot_app/features/home_screen/views/home_view.dart';
 
@@ -14,7 +16,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   final List<Widget> _pages = [
     Center(child: Text('Page 1')),
-    Center(child: Text('Page 2')),
+    TVOCDashboard(tvocLevel: 50),//replace the value from backend
     HomeView(), // Home Page
     Center(child: Text('Page 3')),
     Center(child: Text('Page 4')),
