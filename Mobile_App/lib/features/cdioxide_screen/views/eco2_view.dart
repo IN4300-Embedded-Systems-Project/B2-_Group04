@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:mqtt_client/mqtt_client.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:async';
-import 'dart:math';
-
+import 'package:air_quality_iot_app/service/mqtt_service.dart';
 
 class Eco2VisualizationScreen extends StatefulWidget {
   const Eco2VisualizationScreen({super.key});
@@ -16,13 +15,21 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
   double currentEco2 = 400;
   final List<FlSpot> eco2History = [];
   int timeCounter = 0;
+  late MQTTService mqttService;
 
   @override
   void initState() {
     super.initState();
-    Timer.periodic(const Duration(seconds: 2), (timer) {
+    mqttService = MQTTService();
+    mqttService.connectAndSubscribe();
+
+    mqttService.client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
+      final recMsg = messages[0].payload as MqttPublishMessage;
+      final payload = MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
+      final eco2Value = double.tryParse(payload) ?? 400;
+
       setState(() {
-        currentEco2 = 400 + Random().nextInt(1600).toDouble(); // Simulating sensor data
+        currentEco2 = eco2Value;
         eco2History.add(FlSpot(timeCounter.toDouble(), currentEco2));
         if (eco2History.length > 20) {
           eco2History.removeAt(0);
@@ -46,7 +53,7 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Radial Gauge for Live eCO2 Levels
+            // Radial Gauge
             SizedBox(
               height: 250,
               child: SfRadialGauge(
@@ -79,7 +86,7 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
 
             const SizedBox(height: 20),
 
-            // Line Chart for Historical Trend
+            // Line Chart for Historical Data
             Expanded(
               child: LineChart(
                 LineChartData(
