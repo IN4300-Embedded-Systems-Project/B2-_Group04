@@ -1,5 +1,4 @@
 import 'package:air_quality_iot_app/features/home_screen/view_models/home_viewmodel.dart';
-import 'package:air_quality_iot_app/features/humidity_screen/view_models/humidity_viewmodel.dart';
 import 'package:air_quality_iot_app/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,7 +8,6 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => HomeViewModel()),
-         ChangeNotifierProvider(create: (_) => HumidityProvider()),
         // Add other ViewModels here
       ],
       child: MyApp(),
@@ -26,7 +24,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Air quality IoT app',
       theme: ThemeData(primarySwatch: Colors.blue),
-       initialRoute: AppRoutes.bottomnavbar, 
+      initialRoute: AppRoutes.bottomnavbar,
       onGenerateRoute: AppRoutes.generateRoute,
     );
   }
