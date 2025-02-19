@@ -1,0 +1,2 @@
+D:/Ongoing projects/air_quality_iot_app/air_quality_iot_app/Mobile_App/android/app/.cxx/Debug/3d2r7310/arm64-v8a/CMakeFiles/edit_cache.dir
+D:/Ongoing projects/air_quality_iot_app/air_quality_iot_app/Mobile_App/android/app/.cxx/Debug/3d2r7310/arm64-v8a/CMakeFiles/rebuild_cache.dir
