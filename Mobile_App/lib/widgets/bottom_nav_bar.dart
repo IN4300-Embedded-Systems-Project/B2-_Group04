@@ -1,4 +1,5 @@
 import 'package:air_quality_iot_app/const/colors.dart';
+import 'package:air_quality_iot_app/features/cdioxide_screen/views/eco2_view.dart';
 import 'package:air_quality_iot_app/features/home_screen/views/tvoc_dashboard.dart';
 import 'package:air_quality_iot_app/features/humidity_screen/views/humididty_dashboard.dart';
 // import 'package:fl_chart/fl_chart.dart';
@@ -20,7 +21,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
     TVOCDashboard(tvocLevel: 50),//replace the value from backend
     HomeView(), // Home Page
     Center(child: HumidityPage()),
-    Center(child: Text('Page 4')),
+    Eco2VisualizationScreen(),
   ];
 
   @override
