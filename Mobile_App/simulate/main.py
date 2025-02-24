@@ -49,7 +49,7 @@ def simulate_sensor_data():
     
     while not client.is_connected():
         print("⌛ Waiting for connection...")
-        time.sleep(2)
+        time.sleep(4)
 
     while True:
         temperature = round(random.uniform(20, 35), 2)

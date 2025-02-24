@@ -1,7 +1,6 @@
 import 'dart:async';
+import 'package:air_quality_iot_app/service/mqtt_service.dart';
 import 'package:flutter/material.dart';
-import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class HumidityPage extends StatefulWidget {
@@ -10,67 +9,35 @@ class HumidityPage extends StatefulWidget {
 }
 
 class _HumidityPageState extends State<HumidityPage> {
-  late MqttServerClient client;
   double currentHumidity = 50; // Initial humidity value
   List<FlSpot> humidityData = [];
   int time = 0;
-  bool isConnected = false;
-  StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? mqttSubscription;
+  late StreamSubscription _mqttSubscription;
+
 
   @override
   void initState() {
     super.initState();
-    _connectMQTT();
+    _mqttSubscription = MQTTService().messageStream.listen(
+      (data) {
+        _updateHumidity(data);
+      },
+      onError: (error) {
+        print("MQTT Error: $error");
+        // Handle error as needed
+      },
+    );
   }
+  
 
-  Future<void> _connectMQTT() async {
-    client =
-        MqttServerClient('c197f092.ala.us-east-1.emqxsl.com', 'flutter_client');
-    client.port = 8883; // Use 1883 for TCP, 8883 for SSL/TLS
-    client.secure = true;
-    client.logging(on: true);
-
-    final connMessage = MqttConnectMessage()
-        .withClientIdentifier('flutter_client')
-        .authenticateAs('krishantha', 'krishantha')
-        .startClean();
-    client.connectionMessage = connMessage;
-
-    try {
-      await client.connect();
-      setState(() {
-        isConnected = true;
-      });
-
-      print('✅ MQTT Connected!');
-
-      const humidityTopic = 'air_quality/humidity';
-      client.subscribe(humidityTopic, MqttQos.atLeastOnce);
-
-      mqttSubscription?.cancel(); // Cancel previous listeners if any
-      mqttSubscription = client.updates!
-          .listen((List<MqttReceivedMessage<MqttMessage>> messages) {
-        for (var message in messages) {
-          final recMsg = message.payload as MqttPublishMessage;
-          final payload =
-              MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
-          print("📩 Humidity Data Received: $payload%");
-          _updateHumidity(payload);
-        }
-      });
-    } catch (e) {
-      print('❌ MQTT connection failed: $e');
-    }
-  }
-
-  void _updateHumidity(String payload) {
-    final humidityValue = double.tryParse(payload) ?? 50;
+   void _updateHumidity(Map<String, dynamic> data) {
+    final humidityValue = data['humidity']?.toDouble() ?? 50; // Get humidity from data
     setState(() {
       currentHumidity = humidityValue;
       humidityData.add(FlSpot(time.toDouble(), currentHumidity));
 
       if (humidityData.length > 20) {
-        humidityData.removeAt(0); // Keep only the last 20 readings
+        humidityData.removeAt(0);
       }
       time++;
     });
@@ -88,17 +55,16 @@ class _HumidityPageState extends State<HumidityPage> {
     return "Humid";
   }
 
-  @override
+   @override
   void dispose() {
-    mqttSubscription?.cancel();
-    client.disconnect();
+    _mqttSubscription.cancel(); // Cancel the subscription
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Humidity Visualization (AHT21 Sensor)")),
+      appBar: AppBar(title: Text("Humidity Visualization")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -138,7 +104,7 @@ class _HumidityPageState extends State<HumidityPage> {
                             SideTitles(showTitles: true, reservedSize: 30)),
                     bottomTitles: AxisTitles(
                         sideTitles:
-                            SideTitles(showTitles: true, reservedSize: 22)),
+                            SideTitles(showTitles: true, reservedSize: 40)),
                   ),
                   borderData: FlBorderData(
                       show: true, border: Border.all(color: Colors.black)),

@@ -1,9 +1,12 @@
 import 'package:air_quality_iot_app/features/home_screen/view_models/home_viewmodel.dart';
 import 'package:air_quality_iot_app/routes/app_routes.dart';
+import 'package:air_quality_iot_app/service/mqtt_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await MQTTService().connect(); //
   runApp(
     MultiProvider(
       providers: [
