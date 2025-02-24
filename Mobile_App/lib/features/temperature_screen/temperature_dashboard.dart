@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
-import 'package:syncfusion_flutter_gauges/gauges.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class TemperatureDashboard extends StatefulWidget {
   @override
@@ -12,7 +11,7 @@ class TemperatureDashboard extends StatefulWidget {
 
 class _TemperatureDashboardState extends State<TemperatureDashboard> {
   late MqttServerClient client;
-  double currentTemperature = 25.0; // Default temperature value
+  double currentTemperature = 25.0; // Initial temperature value
   List<FlSpot> temperatureData = [];
   int time = 0;
   bool isConnected = false;
@@ -25,15 +24,15 @@ class _TemperatureDashboardState extends State<TemperatureDashboard> {
   }
 
   Future<void> _connectMQTT() async {
-    client =
-        MqttServerClient('c197f092.ala.us-east-1.emqxsl.com', 'flutter_client');
-    client.port = 8883; // Use 1883 for TCP, 8883 for SSL/TLS
+    client = MqttServerClient(
+        'c197f092.ala.us-east-1.emqxsl.com', 'flutter_client'); // Replace with your broker and client ID
+    client.port = 8883;
     client.secure = true;
     client.logging(on: true);
 
     final connMessage = MqttConnectMessage()
-        .withClientIdentifier('flutter_client')
-        .authenticateAs('krishantha', 'krishantha')
+        .withClientIdentifier('flutter_client') // Replace with your client identifier
+        .authenticateAs('krishantha', 'krishantha') // Replace with your username/password
         .startClean();
     client.connectionMessage = connMessage;
 
@@ -45,12 +44,12 @@ class _TemperatureDashboardState extends State<TemperatureDashboard> {
 
       print('✅ MQTT Connected!');
 
-      const temperatureTopic = 'air_quality/temperature';
+      const temperatureTopic = 'air_quality/temperature'; // Replace with your topic
       client.subscribe(temperatureTopic, MqttQos.atLeastOnce);
 
-      mqttSubscription?.cancel(); // Cancel previous listeners if any
-      mqttSubscription = client.updates!
-          .listen((List<MqttReceivedMessage<MqttMessage>> messages) {
+      mqttSubscription?.cancel();
+      mqttSubscription = client.updates!.listen(
+          (List<MqttReceivedMessage<MqttMessage>> messages) {
         for (var message in messages) {
           final recMsg = message.payload as MqttPublishMessage;
           final payload =
@@ -61,6 +60,7 @@ class _TemperatureDashboardState extends State<TemperatureDashboard> {
       });
     } catch (e) {
       print('❌ MQTT connection failed: $e');
+      // Handle connection errors (e.g., show a snackbar)
     }
   }
 
@@ -71,7 +71,7 @@ class _TemperatureDashboardState extends State<TemperatureDashboard> {
       temperatureData.add(FlSpot(time.toDouble(), currentTemperature));
 
       if (temperatureData.length > 20) {
-        temperatureData.removeAt(0); // Keep only the last 20 readings
+        temperatureData.removeAt(0);
       }
       time++;
     });
@@ -99,84 +99,56 @@ class _TemperatureDashboardState extends State<TemperatureDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Temperature Visualization")),
+      appBar: AppBar(title: const Text("Temperature Visualization")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: getTemperatureColor(),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
-                  Text("Current Temperature",
+                  const Text("Current Temperature",
                       style: TextStyle(fontSize: 18, color: Colors.white)),
                   Text("${currentTemperature.toStringAsFixed(1)} °C",
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Colors.white)),
                   Text(getTemperatureStatus(),
-                      style: TextStyle(fontSize: 20, color: Colors.white)),
+                      style: const TextStyle(fontSize: 20, color: Colors.white)),
                 ],
               ),
             ),
-            SizedBox(height: 20),
-            Expanded(
-              child: SfRadialGauge(
-                axes: <RadialAxis>[
-                  RadialAxis(
-                    minimum: -10,
-                    maximum: 50,
-                    ranges: [
-                      GaugeRange(
-                          startValue: -10, endValue: 15, color: Colors.blue),
-                      GaugeRange(
-                          startValue: 15, endValue: 30, color: Colors.green),
-                      GaugeRange(
-                          startValue: 30, endValue: 50, color: Colors.red),
-                    ],
-                    pointers: <GaugePointer>[
-                      NeedlePointer(value: currentTemperature),
-                    ],
-                    annotations: <GaugeAnnotation>[
-                      GaugeAnnotation(
-                        widget: Text(
-                          '$currentTemperature °C',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        angle: 90,
-                        positionFactor: 0.5,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 20),
             Expanded(
               child: LineChart(
                 LineChartData(
-                  minX:
-                      temperatureData.isNotEmpty ? temperatureData.first.x : 0,
-                  maxX:
-                      temperatureData.isNotEmpty ? temperatureData.last.x : 10,
-                  minY: -10,
-                  maxY: 50,
+                  minX: temperatureData.isNotEmpty ? temperatureData.first.x : 0,
+                  maxX: temperatureData.isNotEmpty ? temperatureData.last.x : 10,
+                  minY: -10,  // Set as per your expected range
+                  maxY: 50,   // Set as per your expected range
                   gridData: FlGridData(show: false),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
-                        sideTitles:
-                            SideTitles(showTitles: true, reservedSize: 30)),
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 30,
+                      ),
+                    ),
                     bottomTitles: AxisTitles(
-                        sideTitles:
-                            SideTitles(showTitles: true, reservedSize: 40)),
+                      sideTitles:
+                          SideTitles(showTitles: true, reservedSize: 40),
+                    ),
                   ),
                   borderData: FlBorderData(
-                      show: true, border: Border.all(color: Colors.black)),
+                    show: true,
+                    border: Border.all(color: Colors.black),
+                  ),
                   lineBarsData: [
                     LineChartBarData(
                       spots: temperatureData,
@@ -185,7 +157,9 @@ class _TemperatureDashboardState extends State<TemperatureDashboard> {
                       barWidth: 3,
                       isStrokeCapRound: true,
                       belowBarData: BarAreaData(
-                          show: true, color: Colors.orange.withOpacity(0.3)),
+                        show: true,
+                        color: Colors.orange.withOpacity(0.3),
+                      ),
                     ),
                   ],
                 ),

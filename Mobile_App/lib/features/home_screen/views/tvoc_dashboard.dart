@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
-import 'package:syncfusion_flutter_gauges/gauges.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class TVOCDashboard extends StatefulWidget {
   @override
@@ -12,7 +11,7 @@ class TVOCDashboard extends StatefulWidget {
 
 class _TVOCDashboardState extends State<TVOCDashboard> {
   late MqttServerClient client;
-  double currentTVOC = 50; // Default TVOC value
+  double currentTVOC = 50; // Initial TVOC value
   List<FlSpot> tvocData = [];
   int time = 0;
   bool isConnected = false;
@@ -25,15 +24,15 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
   }
 
   Future<void> _connectMQTT() async {
-    client =
-        MqttServerClient('c197f092.ala.us-east-1.emqxsl.com', 'flutter_client');
-    client.port = 8883; // Use 1883 for TCP, 8883 for SSL/TLS
+     client =
+        MqttServerClient('c197f092.ala.us-east-1.emqxsl.com', 'flutter_client'); // Replace with your broker and client ID
+    client.port = 8883; 
     client.secure = true;
     client.logging(on: true);
 
     final connMessage = MqttConnectMessage()
-        .withClientIdentifier('flutter_client')
-        .authenticateAs('krishantha', 'krishantha')
+        .withClientIdentifier('flutter_client') // Replace with your client identifier
+        .authenticateAs('krishantha', 'krishantha') // Replace with your username and password
         .startClean();
     client.connectionMessage = connMessage;
 
@@ -45,10 +44,10 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
 
       print('✅ MQTT Connected!');
 
-      const tvocTopic = 'air_quality/tvoc';
+      const tvocTopic = 'air_quality/tvoc'; // Replace with your topic
       client.subscribe(tvocTopic, MqttQos.atLeastOnce);
 
-      mqttSubscription?.cancel(); // Cancel previous listeners if any
+      mqttSubscription?.cancel();
       mqttSubscription = client.updates!
           .listen((List<MqttReceivedMessage<MqttMessage>> messages) {
         for (var message in messages) {
@@ -61,33 +60,37 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
       });
     } catch (e) {
       print('❌ MQTT connection failed: $e');
+      // Handle connection errors appropriately (e.g., show a snackbar)
     }
   }
 
   void _updateTVOC(String payload) {
-    final tvocValue = double.tryParse(payload) ?? 50;
+    final tvocValue = double.tryParse(payload) ?? 50; // Handle parsing errors
     setState(() {
       currentTVOC = tvocValue;
       tvocData.add(FlSpot(time.toDouble(), currentTVOC));
 
       if (tvocData.length > 20) {
-        tvocData.removeAt(0); // Keep only the last 20 readings
+        tvocData.removeAt(0); 
       }
       time++;
     });
   }
 
+
   Color getTVOCColor() {
-    if (currentTVOC < 150) return Colors.green;
+    if (currentTVOC < 150) return Colors.green;  // Example thresholds
     if (currentTVOC < 300) return Colors.yellow;
     return Colors.red;
   }
 
   String getTVOCStatus() {
-    if (currentTVOC < 150) return "Good";
+    if (currentTVOC < 150) return "Good";  // Example thresholds
     if (currentTVOC < 300) return "Moderate";
     return "Unhealthy";
   }
+
+
 
   @override
   void dispose() {
@@ -96,74 +99,46 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("TVOC Visualization")),
+      appBar: AppBar(title: const Text("TVOC Visualization")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Current TVOC Value Display
             Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: getTVOCColor(),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
-                  Text("Current TVOC",
+                  const Text("Current TVOC",
                       style: TextStyle(fontSize: 18, color: Colors.white)),
                   Text("${currentTVOC.toStringAsFixed(1)} ppb",
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Colors.white)),
                   Text(getTVOCStatus(),
-                      style: TextStyle(fontSize: 20, color: Colors.white)),
+                      style: const TextStyle(fontSize: 20, color: Colors.white)),
                 ],
               ),
             ),
-            SizedBox(height: 20),
-            Expanded(
-              child: SfRadialGauge(
-                axes: <RadialAxis>[
-                  RadialAxis(
-                    minimum: 0,
-                    maximum: 500,
-                    ranges: [
-                      GaugeRange(
-                          startValue: 0, endValue: 150, color: Colors.green),
-                      GaugeRange(
-                          startValue: 150, endValue: 300, color: Colors.yellow),
-                      GaugeRange(
-                          startValue: 300, endValue: 500, color: Colors.red),
-                    ],
-                    pointers: <GaugePointer>[
-                      NeedlePointer(value: currentTVOC),
-                    ],
-                    annotations: <GaugeAnnotation>[
-                      GaugeAnnotation(
-                        widget: Text(
-                          '$currentTVOC ppb',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        angle: 90,
-                        positionFactor: 0.5,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
+            const SizedBox(height: 20),
+
+            // Line Chart
+            Expanded( // Use Expanded for the chart to fill available space
               child: LineChart(
                 LineChartData(
                   minX: tvocData.isNotEmpty ? tvocData.first.x : 0,
                   maxX: tvocData.isNotEmpty ? tvocData.last.x : 10,
-                  minY: 0,
-                  maxY: 500,
+                  minY: 0, // Set appropriate min Y
+                  maxY: 500, // Set appropriate max Y
                   gridData: FlGridData(show: false),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
@@ -179,7 +154,7 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
                     LineChartBarData(
                       spots: tvocData,
                       isCurved: true,
-                      color: Colors.blue,
+                      color: Colors.blue, // Choose a suitable color
                       barWidth: 3,
                       isStrokeCapRound: true,
                       belowBarData: BarAreaData(
