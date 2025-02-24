@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <WiFiUdp.h>
@@ -20,33 +21,35 @@
 #define debugln(x)
 #endif
 
-// wifi options
+// WiFi credentials
 const char *WIFI_SSID = "Galaxy M13";
 const char *WIFI_PASSWORD = "krishantha256";
 
-// mqtt options
+// MQTT broker settings
 const char *MQTT_HOST = "c197f092.ala.us-east-1.emqxsl.com";
-
-const char *MQTT_USER = "test";
-const char *MQTT_PASWORD = "test";
-
+const char *MQTT_USER = "krishantha";
+const char *MQTT_PASWORD = "krishantha";
 #define MQTT_PORT 8883
-#define MQTT_TOPIC "sensors/"
+
+// MQTT topics
+#define ECO2_TOPIC "air_quality/eco2"
+#define HUMIDITY_TOPIC "air_quality/humidity"
+#define TVOC_TOPIC "air_quality/tvoc"
+#define TEMPERATURE_TOPIC "air_quality/temperature"
 
 #define LED_PIN 2
 
-// pin and I2C configurations
+// I2C Pins
 #define SDA_PIN 21
 #define SCL_PIN 22
-#define I2C_FREQUENCY 100000 // I2C frequency in Hz (100 kHz)
+#define I2C_FREQUENCY 100000 // 100 kHz
 
 long lastMsg = 0;
 
 I2cInterface i2c;
 
-WiFiClient wifi;
-PubSubClient client(wifi);
-
+WiFiClientSecure wifiSecure;
+PubSubClient client(wifiSecure);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 0, 60000);
 
@@ -54,129 +57,129 @@ CustomAHT21 aht21;
 CustomENS160 ens160;
 
 /**
- * @brief Retrieves MQTT topic given the MAC address of the device
- *
- * @returns the MQTT topic
- */
-String getMqttTopic()
-{
-    String mac = String(WiFi.macAddress());
-    mac.replace(":", "");
-    return String(MQTT_TOPIC) + mac;
-}
-
-/**
- * @brief Retrieves MQTT clientId given the MAC address of the device
- *
- * @returns the MQTT topic
- */
-String getMqttClientId()
-{
-    String mac = String(WiFi.macAddress());
-    mac.replace(":", "");
-    return mac;
-}
-
-/**
- * @brief Transforms given time into format "%Y-%m-%dT%H:%M:%SZ"
- *
- * @param epochTime the current time
- * @returns the formmated time
- */
-String getFormattedTime(unsigned long epochTime)
-{
-    time_t rawTime = epochTime;
-    struct tm *timeInfo;
-    timeInfo = gmtime(&rawTime); // Convert epoch time to UTC
-
-    char buffer[25];
-    strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", timeInfo); // Format time as ISO 8601
-
-    return String(buffer);
-}
-
-/**
  * @brief Initializes the WiFi connection.
- *
- * This function attempts to connect to the specified WiFi network
- * using the provided SSID and password. It will block until the
- * connection is successful.
  */
 void initializeWiFi()
 {
+    debugln("\n🔄 [WiFi] Connecting...");
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-    String debugLog = "[WiFi] Connecting to: " + String(WIFI_SSID) + " ";
-    debug(debugLog);
+    debug("[WiFi] Connecting to: ");
+    debugln(WIFI_SSID);
+
     while (WiFi.status() != WL_CONNECTED)
     {
         debug(".");
         delay(500);
     }
-    debugln();
-    debugln("[WiFi] Successfully connected.");
+    debugln("\n✅ [WiFi] Connected!");
+    debug("[WiFi] IP Address: ");
+    debugln(WiFi.localIP());
 }
 
+/**
+ * @brief Initializes the MQTT connection.
+ */
 void initializeMqtt()
 {
-    String debugLog = "[MQTT] Connecting to: " + String(MQTT_HOST) + ":" + String(MQTT_PORT);
-    debug(debugLog.c_str());
-    debugln();
+    debugln("\n🔄 [MQTT] Setting up secure connection...");
 
-    String clientId = getMqttClientId();
-
-    client.setKeepAlive(60);
+    wifiSecure.setInsecure(); // Allow insecure SSL like in Python
     client.setServer(MQTT_HOST, MQTT_PORT);
+    
+    String clientId = "esp32_client";
 
     while (!client.connected())
     {
+        debugln("[MQTT] Connecting to broker...");
         if (client.connect(clientId.c_str(), MQTT_USER, MQTT_PASWORD))
         {
-            debugln("[MQTT]: Successfully connected to broker");
+            debugln("✅ [MQTT] Successfully connected!");
             digitalWrite(LED_PIN, HIGH);
         }
         else
         {
-            debug("Failed, rc=");
+            debug("[MQTT] Failed, rc=");
             debug(client.state());
-            debugln(" Retrying in 5 seconds...");
-            delay(2000);
+            debugln(" ❌ Retrying in 5 seconds...");
+            delay(5000);
         }
     }
 }
 
+/**
+ * @brief Initializes debugging settings.
+ */
 void initializeDebugging()
 {
     Serial.begin(115200);
-    if (DEBUG == 1)
-    {
-        ens160.ens.enableDebugging(Serial);
-    }
+    debugln("🔍 [Debug] Debugging initialized");
 }
 
+/**
+ * @brief Initializes I2C communication.
+ */
 void initializeI2C()
 {
+    debugln("🔄 [I2C] Initializing...");
     Wire.begin(SDA_PIN, SCL_PIN, I2C_FREQUENCY);
     i2c.begin(Wire, ENS160_I2C_ADDRESS);
+    debugln("✅ [I2C] Initialized.");
 }
 
+/**
+ * @brief Initializes sensors.
+ */
 void initializeSensors()
 {
-    // initialize ENS160 sensor
-    debugln("[initializeSensors] Initializing ENS160.");
+    debugln("\n🔄 [Sensors] Initializing...");
+    
+    debug("[Sensors] ENS160... ");
     ens160.begin(&i2c);
-    debugln("[initializeSensors] ENS160 initialized successfully.");
+    debugln("✅ Done.");
 
-    // initialize AHT21 sensor
-    debug("[initializeSensors] Initializing AHT21.");
+    debug("[Sensors] AHT21... ");
     aht21.begin();
-    debugln("[initializeSensors] AHT21 initialized successfully.");
+    debugln("✅ Done.");
 }
 
+/**
+ * @brief Publishes sensor data to MQTT topics.
+ */
+void publishSensorData()
+{
+    debugln("\n📡 [Publishing] Collecting sensor data...");
+
+    AHT21Data aht21d = aht21.read();
+    ENS160Data ens160d = ens160.read();
+
+    debug("[Sensor] Temperature: "); debug(aht21d.temp); debugln(" °C");
+    debug("[Sensor] Humidity: "); debug(aht21d.humidity); debugln(" %");
+    debug("[Sensor] TVOC: "); debug(ens160d.tvoc); debugln(" ppb");
+    debug("[Sensor] eCO2: "); debug(ens160d.eco2); debugln(" ppm");
+
+    char tempBuffer[10], humidBuffer[10], tvocBuffer[10], eco2Buffer[10];
+
+    dtostrf(aht21d.temp, 4, 2, tempBuffer);
+    dtostrf(aht21d.humidity, 4, 2, humidBuffer);
+    dtostrf(ens160d.tvoc, 4, 2, tvocBuffer);
+    dtostrf(ens160d.eco2, 4, 2, eco2Buffer);
+
+    client.publish(TEMPERATURE_TOPIC, tempBuffer);
+    client.publish(HUMIDITY_TOPIC, humidBuffer);
+    client.publish(TVOC_TOPIC, tvocBuffer);
+    client.publish(ECO2_TOPIC, eco2Buffer);
+
+    debugln("✅ [MQTT] Published all sensor data.");
+}
+
+/**
+ * @brief ESP32 setup function.
+ */
 void setup()
 {
-    debugln("Starting setup...");
+    debugln("\n🚀 [Setup] Starting...");
     pinMode(LED_PIN, OUTPUT);
 
     initializeDebugging();
@@ -187,62 +190,33 @@ void setup()
 
     timeClient.begin();
     timeClient.setTimeOffset(0);
-    debugln("Setup complete.");
+    debugln("\n✅ [Setup] Complete.");
 }
 
+/**
+ * @brief ESP32 main loop function.
+ */
 void loop()
 {
     if (WiFi.status() != WL_CONNECTED)
     {
+        debugln("\n❌ [WiFi] Disconnected! Reconnecting...");
         initializeWiFi();
     }
 
     if (!client.connected())
     {
         digitalWrite(LED_PIN, LOW);
+        debugln("\n❌ [MQTT] Disconnected! Reconnecting...");
         initializeMqtt();
     }
 
     long now = millis();
-    if (now == 0 || now - lastMsg > 15000)
+    if (now == 0 || now - lastMsg > 4000)
     {
-        String wifiLog = "[loop] WiFi: " + WiFi.SSID() + "\tIP: " + (WiFi.localIP()).toString() + "\t RSSI: " + WiFi.RSSI();
-        debugln(wifiLog);
-
         lastMsg = now;
-
-        // retrieve timestamp
-        timeClient.update();
-        unsigned long epochTime = timeClient.getEpochTime();
-        String timestamp = getFormattedTime(timeClient.getEpochTime());
-        debugln(timestamp);
-
-        AHT21Data aht21d = aht21.read();
-        String aht21log = "[loop] AHT21: TEMP: " + String(aht21d.temp) + "\tHUM: " + String(aht21d.humidity);
-
-        ENS160Data ens160d = ens160.read();
-        String ens160log = "[loop] ENS160: ECO2: " + String(ens160d.eco2) + "\tTVOC: " + String(ens160d.tvoc);
-
-        debugln(aht21log.c_str());
-        debugln(ens160log.c_str());
-
-        JsonDocument json;
-        json["timestamp"] = timestamp;
-        json["eco2"] = ens160d.eco2;
-        json["tvoc"] = ens160d.tvoc;
-        json["humidity"] = aht21d.humidity;
-        json["temperature"] = aht21d.temp;
-
-        // Publish the JSON string to the constructed topic
-        String topic = getMqttTopic();
-        char jsonBuffer[256];
-        serializeJson(json, jsonBuffer);
-        client.publish(topic.c_str(), jsonBuffer);
-
-        debug("[loop] Published message to ");
-        debugln(topic.c_str());
+        publishSensorData();
     }
 
-    // call loop() regularly to maintain MQTT connection and handle incoming messages
     client.loop();
 }
