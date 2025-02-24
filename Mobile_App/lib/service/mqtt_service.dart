@@ -1,72 +1,78 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
 class MQTTService {
-  late MqttServerClient client;
-  Function(String topic, String message)?
-      onMessageReceived; // Callback for updates
+  static final MQTTService _instance = MQTTService._internal();
 
-  MQTTService({this.onMessageReceived}) {
-    client =
-        MqttServerClient('c197f092.ala.us-east-1.emqxsl.com', 'flutter_client');
-    client.port = 8883; // Use 1883 for TCP, 8883 for SSL/TLS
-    client.secure = true;
-    client.logging(on: true);
+  factory MQTTService() => _instance;
 
-    final connMessage = MqttConnectMessage()
-        .withClientIdentifier('flutter_client')
-        .authenticateAs('krishantha', 'krishantha')
+  late MqttServerClient _client;
+  final _messageStreamController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get messageStream =>
+      _messageStreamController.stream;
+
+  MQTTService._internal() {
+    _client = MqttServerClient(
+        'c197f092.ala.us-east-1.emqxsl.com', 'flutter_client'); // Your broker and client ID
+    _client.port = 8883;
+    _client.secure = true;
+    _client.logging(on: true);
+
+    final connMess = MqttConnectMessage()
+        .withClientIdentifier('flutter_client') // Your client ID
+        .authenticateAs('krishantha', 'krishantha') // Your username/password
         .startClean();
-    client.connectionMessage = connMessage;
+    _client.connectionMessage = connMess;
   }
 
-  Future<void> connectAndSubscribe() async {
+  Future<void> connect() async {
     try {
-      await client.connect();
+      await _client.connect();
       print('✅ MQTT Connected!');
-
-      // Topics to subscribe
-      const eco2Topic = 'air_quality/eco2';
-      const humidityTopic = 'air_quality/humidity';
-      const tvocTopic = 'air_quality/tvoc';
-      const temperatureTopic =
-          'air_quality/temperature'; // Added Temperature Support
-
-      client.subscribe(eco2Topic, MqttQos.atLeastOnce);
-      client.subscribe(humidityTopic, MqttQos.atLeastOnce);
-      client.subscribe(tvocTopic, MqttQos.atLeastOnce);
-      client.subscribe(
-          temperatureTopic, MqttQos.atLeastOnce); // Subscribe to Temperature
-
-      client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
-        for (var message in messages) {
-          final recMsg = message.payload as MqttPublishMessage;
-          final payload =
-              MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
-          final topic = message.topic;
-
-          print('📩 Data Received on $topic: $payload');
-
-          // Pass received data to the UI callback
-          if (onMessageReceived != null) {
-            onMessageReceived!(topic, payload);
-          }
-        }
-      });
+      _subscribeToTopics();
     } catch (e) {
       print('❌ MQTT connection failed: $e');
+      // Handle connection errors, maybe retry logic?
     }
   }
 
-  void publishData(String topic, double value) {
-    final builder = MqttClientPayloadBuilder();
-    builder.addString(value.toString());
-    client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
-    print('📤 Published $value to $topic');
+  void _subscribeToTopics() {
+    const topics = [
+      'air_quality/eco2',
+      'air_quality/humidity',
+      'air_quality/tvoc',
+      'air_quality/temperature',
+    ];
+    for (final topic in topics) {
+      _client.subscribe(topic, MqttQos.atLeastOnce);
+      print('Subscribed to: $topic');
+    }
+
+    _client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> c) {
+      final recMsg = c[0].payload as MqttPublishMessage;
+      final payload =
+          MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
+      final topic = c[0].topic;
+
+      try {
+        dynamic data = jsonDecode(payload);
+        if (data is! Map) {
+          data = {topic.split('/').last: data};
+        }
+        _messageStreamController.add(Map<String, dynamic>.from(data));
+      } catch (e) {
+        print('Error decoding JSON: $e');
+        _messageStreamController.addError(e); // Add error to the stream
+      }
+    });
   }
 
+
   void disconnect() {
-    client.disconnect();
+    _client.disconnect();
     print('🔌 MQTT Disconnected.');
   }
 }

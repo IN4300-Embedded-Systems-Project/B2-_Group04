@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'package:air_quality_iot_app/service/mqtt_service.dart';
 import 'package:flutter/material.dart';
-import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -14,58 +14,28 @@ class _TemperatureDashboardState extends State<TemperatureDashboard> {
   double currentTemperature = 25.0; // Initial temperature value
   List<FlSpot> temperatureData = [];
   int time = 0;
-  bool isConnected = false;
-  StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? mqttSubscription;
+  late StreamSubscription _mqttSubscription;
 
-  @override
+ @override
+    @override
   void initState() {
     super.initState();
-    _connectMQTT();
+    _mqttSubscription = MQTTService().messageStream.listen(
+      (data) {          // Correct parameter name here: data
+        _updateTemperature(data);
+      },
+      onError: (error) {
+        print("MQTT Error: $error");
+        // Handle error as needed
+      },
+    );
   }
 
-  Future<void> _connectMQTT() async {
-    client = MqttServerClient(
-        'c197f092.ala.us-east-1.emqxsl.com', 'flutter_client'); // Replace with your broker and client ID
-    client.port = 8883;
-    client.secure = true;
-    client.logging(on: true);
 
-    final connMessage = MqttConnectMessage()
-        .withClientIdentifier('flutter_client') // Replace with your client identifier
-        .authenticateAs('krishantha', 'krishantha') // Replace with your username/password
-        .startClean();
-    client.connectionMessage = connMessage;
+ 
 
-    try {
-      await client.connect();
-      setState(() {
-        isConnected = true;
-      });
-
-      print('✅ MQTT Connected!');
-
-      const temperatureTopic = 'air_quality/temperature'; // Replace with your topic
-      client.subscribe(temperatureTopic, MqttQos.atLeastOnce);
-
-      mqttSubscription?.cancel();
-      mqttSubscription = client.updates!.listen(
-          (List<MqttReceivedMessage<MqttMessage>> messages) {
-        for (var message in messages) {
-          final recMsg = message.payload as MqttPublishMessage;
-          final payload =
-              MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
-          print("📩 Temperature Data Received: $payload °C");
-          _updateTemperature(payload);
-        }
-      });
-    } catch (e) {
-      print('❌ MQTT connection failed: $e');
-      // Handle connection errors (e.g., show a snackbar)
-    }
-  }
-
-  void _updateTemperature(String payload) {
-    final tempValue = double.tryParse(payload) ?? 25.0;
+  void _updateTemperature(Map<String, dynamic> data) {  // Correct parameter name
+    final tempValue = data['temperature']?.toDouble() ?? 25.0;  // Access 'temperature' from data
     setState(() {
       currentTemperature = tempValue;
       temperatureData.add(FlSpot(time.toDouble(), currentTemperature));
@@ -91,8 +61,7 @@ class _TemperatureDashboardState extends State<TemperatureDashboard> {
 
   @override
   void dispose() {
-    mqttSubscription?.cancel();
-    client.disconnect();
+    _mqttSubscription.cancel(); // Cancel the subscription!
     super.dispose();
   }
 

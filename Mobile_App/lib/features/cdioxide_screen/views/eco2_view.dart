@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -14,45 +15,28 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
   double currentEco2 = 400; // Initial value
   List<FlSpot> eco2Data = [];
   int time = 0;
-  late MQTTService mqttService;
+  late StreamSubscription _mqttSubscription;
 
 
-  @override
+
+    @override
   void initState() {
     super.initState();
 
-    mqttService = MQTTService(); // Initialize MQTTService
-    mqttService.connectAndSubscribe();  // Connect and subscribe to topics
-
-
-    mqttService.client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> c) {
-      final recMsg = c[0].payload as MqttPublishMessage;
-      final pt = MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
-
-      try {
-        dynamic jsonData = jsonDecode(pt); // Use dynamic
-
-        double eco2Value;
-        if (jsonData is Map) {  // Check if it's a JSON object (Map)
-          eco2Value = jsonData['eco2']?.toDouble() ?? 400;
-        } else if (jsonData is double || jsonData is int) { // Check if it's a number
-          eco2Value = jsonData.toDouble(); 
-        } else {
-          print("❌ Invalid data format: $jsonData"); // Log the bad data
-          eco2Value = 400; // Use a default value
-        }
-
-        _updateEco2(eco2Value.toString()); // Update with the correct value
-
-      } catch (e) {
-        print("❌ JSON/Data Parsing Error: $e"); // More descriptive error message
-      }
-    });
-
+    _mqttSubscription = MQTTService().messageStream.listen(
+      (data) {
+        _updateEco2(data);
+      },
+      onError: (error) {
+        print("MQTT Error: $error");
+        // Handle error as needed
+      },
+    );
   }
 
-  void _updateEco2(String payload) {
-    final eco2Value = double.tryParse(payload) ?? 400;
+  void _updateEco2(Map<String, dynamic> data) {
+    final eco2Value = data['eco2']?.toDouble() ?? 400;  // Extract 'eco2' from data
+
     setState(() {
       currentEco2 = eco2Value;
       eco2Data.add(FlSpot(time.toDouble(), currentEco2));
@@ -65,28 +49,20 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
 
 
   Color getEco2Color() {
-    // Define your eCO2 color logic here based on currentEco2
-    if (currentEco2 < 800)
-      return Colors.green;  // Example: Green for good
-    else if (currentEco2 < 1200)
-      return Colors.orange; // Example: Orange for moderate
-    else
-      return Colors.red;    // Example: Red for bad
-
+    if (currentEco2 < 800) return Colors.green;
+    if (currentEco2 < 1200) return Colors.orange;
+    return Colors.red;
   }
 
-  String getEco2Status() {    
-    if (currentEco2 < 800)
-      return "Good";  // Example: Green for good
-    else if (currentEco2 < 1200)
-      return "Moderate"; // Example: Orange for moderate
-    else
-      return "Bad";    // Example: Red for bad
+  String getEco2Status() {
+    if (currentEco2 < 800) return "Good";
+    if (currentEco2 < 1200) return "Moderate";
+    return "Bad";
   }
 
   @override
   void dispose() {
-    mqttService.disconnect(); // Disconnect MQTT in dispose
+    _mqttSubscription.cancel(); // Cancel the subscription
     super.dispose();
   }
 

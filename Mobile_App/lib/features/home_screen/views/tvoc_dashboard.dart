@@ -1,7 +1,6 @@
 import 'dart:async';
+import 'package:air_quality_iot_app/service/mqtt_service.dart';
 import 'package:flutter/material.dart';
-import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class TVOCDashboard extends StatefulWidget {
@@ -10,68 +9,34 @@ class TVOCDashboard extends StatefulWidget {
 }
 
 class _TVOCDashboardState extends State<TVOCDashboard> {
-  late MqttServerClient client;
-  double currentTVOC = 50; // Initial TVOC value
+   double currentTVOC = 50; // Initial TVOC value
   List<FlSpot> tvocData = [];
   int time = 0;
-  bool isConnected = false;
-  StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? mqttSubscription;
+  late StreamSubscription _mqttSubscription;
 
   @override
   void initState() {
     super.initState();
-    _connectMQTT();
+    _mqttSubscription = MQTTService().messageStream.listen(
+      (data) {
+        _updateTVOC(data);
+      },
+      onError: (error) {
+        print("MQTT Error: $error");
+        // Handle error as needed
+      },
+    );
   }
 
-  Future<void> _connectMQTT() async {
-     client =
-        MqttServerClient('c197f092.ala.us-east-1.emqxsl.com', 'flutter_client'); // Replace with your broker and client ID
-    client.port = 8883; 
-    client.secure = true;
-    client.logging(on: true);
 
-    final connMessage = MqttConnectMessage()
-        .withClientIdentifier('flutter_client') // Replace with your client identifier
-        .authenticateAs('krishantha', 'krishantha') // Replace with your username and password
-        .startClean();
-    client.connectionMessage = connMessage;
-
-    try {
-      await client.connect();
-      setState(() {
-        isConnected = true;
-      });
-
-      print('✅ MQTT Connected!');
-
-      const tvocTopic = 'air_quality/tvoc'; // Replace with your topic
-      client.subscribe(tvocTopic, MqttQos.atLeastOnce);
-
-      mqttSubscription?.cancel();
-      mqttSubscription = client.updates!
-          .listen((List<MqttReceivedMessage<MqttMessage>> messages) {
-        for (var message in messages) {
-          final recMsg = message.payload as MqttPublishMessage;
-          final payload =
-              MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
-          print("📩 TVOC Data Received: $payload ppb");
-          _updateTVOC(payload);
-        }
-      });
-    } catch (e) {
-      print('❌ MQTT connection failed: $e');
-      // Handle connection errors appropriately (e.g., show a snackbar)
-    }
-  }
-
-  void _updateTVOC(String payload) {
-    final tvocValue = double.tryParse(payload) ?? 50; // Handle parsing errors
+  void _updateTVOC(Map<String, dynamic> data) {
+    final tvocValue = data['tvoc']?.toDouble() ?? 50; // Extract 'tvoc' from data
     setState(() {
       currentTVOC = tvocValue;
       tvocData.add(FlSpot(time.toDouble(), currentTVOC));
 
       if (tvocData.length > 20) {
-        tvocData.removeAt(0); 
+        tvocData.removeAt(0);
       }
       time++;
     });
@@ -92,10 +57,9 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
 
 
 
-  @override
+   @override
   void dispose() {
-    mqttSubscription?.cancel();
-    client.disconnect();
+    _mqttSubscription.cancel(); // Cancel the subscription
     super.dispose();
   }
 
