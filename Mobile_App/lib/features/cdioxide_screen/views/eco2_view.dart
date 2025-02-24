@@ -69,7 +69,7 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("eCO2 Visualization (ENS160 Sensor)")),
+      appBar: AppBar(title: Text("eCO2 Visualization")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

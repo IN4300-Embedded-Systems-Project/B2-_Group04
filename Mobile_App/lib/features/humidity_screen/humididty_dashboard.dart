@@ -64,7 +64,7 @@ class _HumidityPageState extends State<HumidityPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Humidity Visualization (AHT21 Sensor)")),
+      appBar: AppBar(title: Text("Humidity Visualization")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
