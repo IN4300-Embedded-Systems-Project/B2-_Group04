@@ -138,7 +138,7 @@ class _HumidityPageState extends State<HumidityPage> {
                             SideTitles(showTitles: true, reservedSize: 30)),
                     bottomTitles: AxisTitles(
                         sideTitles:
-                            SideTitles(showTitles: true, reservedSize: 22)),
+                            SideTitles(showTitles: true, reservedSize: 40)),
                   ),
                   borderData: FlBorderData(
                       show: true, border: Border.all(color: Colors.black)),

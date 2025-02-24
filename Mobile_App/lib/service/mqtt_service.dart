@@ -3,8 +3,10 @@ import 'package:mqtt_client/mqtt_server_client.dart';
 
 class MQTTService {
   late MqttServerClient client;
+  Function(String topic, String message)?
+      onMessageReceived; // Callback for updates
 
-  MQTTService() {
+  MQTTService({this.onMessageReceived}) {
     client =
         MqttServerClient('c197f092.ala.us-east-1.emqxsl.com', 'flutter_client');
     client.port = 8883; // Use 1883 for TCP, 8883 for SSL/TLS
@@ -23,12 +25,18 @@ class MQTTService {
       await client.connect();
       print('✅ MQTT Connected!');
 
-      // Subscribe to CO₂ and Humidity topics
+      // Topics to subscribe
       const eco2Topic = 'air_quality/eco2';
       const humidityTopic = 'air_quality/humidity';
+      const tvocTopic = 'air_quality/tvoc';
+      const temperatureTopic =
+          'air_quality/temperature'; // Added Temperature Support
 
       client.subscribe(eco2Topic, MqttQos.atLeastOnce);
       client.subscribe(humidityTopic, MqttQos.atLeastOnce);
+      client.subscribe(tvocTopic, MqttQos.atLeastOnce);
+      client.subscribe(
+          temperatureTopic, MqttQos.atLeastOnce); // Subscribe to Temperature
 
       client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
         for (var message in messages) {
@@ -37,10 +45,11 @@ class MQTTService {
               MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
           final topic = message.topic;
 
-          if (topic == eco2Topic) {
-            print('📩 eCO₂ Data Received: $payload ppm');
-          } else if (topic == humidityTopic) {
-            print('📩 Humidity Data Received: $payload%');
+          print('📩 Data Received on $topic: $payload');
+
+          // Pass received data to the UI callback
+          if (onMessageReceived != null) {
+            onMessageReceived!(topic, payload);
           }
         }
       });
@@ -49,15 +58,7 @@ class MQTTService {
     }
   }
 
-  void publishEco2(double value) {
-    _publishData('air_quality/eco2', value);
-  }
-
-  void publishHumidity(double value) {
-    _publishData('air_quality/humidity', value);
-  }
-
-  void _publishData(String topic, double value) {
+  void publishData(String topic, double value) {
     final builder = MqttClientPayloadBuilder();
     builder.addString(value.toString());
     client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);

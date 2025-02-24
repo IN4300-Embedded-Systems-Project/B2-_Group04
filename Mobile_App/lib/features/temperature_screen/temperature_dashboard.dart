@@ -5,15 +5,15 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 
-class TVOCDashboard extends StatefulWidget {
+class TemperatureDashboard extends StatefulWidget {
   @override
-  _TVOCDashboardState createState() => _TVOCDashboardState();
+  _TemperatureDashboardState createState() => _TemperatureDashboardState();
 }
 
-class _TVOCDashboardState extends State<TVOCDashboard> {
+class _TemperatureDashboardState extends State<TemperatureDashboard> {
   late MqttServerClient client;
-  double currentTVOC = 50; // Default TVOC value
-  List<FlSpot> tvocData = [];
+  double currentTemperature = 25.0; // Default temperature value
+  List<FlSpot> temperatureData = [];
   int time = 0;
   bool isConnected = false;
   StreamSubscription<List<MqttReceivedMessage<MqttMessage>>>? mqttSubscription;
@@ -45,8 +45,8 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
 
       print('✅ MQTT Connected!');
 
-      const tvocTopic = 'air_quality/tvoc';
-      client.subscribe(tvocTopic, MqttQos.atLeastOnce);
+      const temperatureTopic = 'air_quality/temperature';
+      client.subscribe(temperatureTopic, MqttQos.atLeastOnce);
 
       mqttSubscription?.cancel(); // Cancel previous listeners if any
       mqttSubscription = client.updates!
@@ -55,8 +55,8 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
           final recMsg = message.payload as MqttPublishMessage;
           final payload =
               MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
-          print("📩 TVOC Data Received: $payload ppb");
-          _updateTVOC(payload);
+          print("📩 Temperature Data Received: $payload °C");
+          _updateTemperature(payload);
         }
       });
     } catch (e) {
@@ -64,29 +64,29 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
     }
   }
 
-  void _updateTVOC(String payload) {
-    final tvocValue = double.tryParse(payload) ?? 50;
+  void _updateTemperature(String payload) {
+    final tempValue = double.tryParse(payload) ?? 25.0;
     setState(() {
-      currentTVOC = tvocValue;
-      tvocData.add(FlSpot(time.toDouble(), currentTVOC));
+      currentTemperature = tempValue;
+      temperatureData.add(FlSpot(time.toDouble(), currentTemperature));
 
-      if (tvocData.length > 20) {
-        tvocData.removeAt(0); // Keep only the last 20 readings
+      if (temperatureData.length > 20) {
+        temperatureData.removeAt(0); // Keep only the last 20 readings
       }
       time++;
     });
   }
 
-  Color getTVOCColor() {
-    if (currentTVOC < 150) return Colors.green;
-    if (currentTVOC < 300) return Colors.yellow;
+  Color getTemperatureColor() {
+    if (currentTemperature < 15) return Colors.blue;
+    if (currentTemperature < 30) return Colors.green;
     return Colors.red;
   }
 
-  String getTVOCStatus() {
-    if (currentTVOC < 150) return "Good";
-    if (currentTVOC < 300) return "Moderate";
-    return "Unhealthy";
+  String getTemperatureStatus() {
+    if (currentTemperature < 15) return "Cold";
+    if (currentTemperature < 30) return "Comfortable";
+    return "Hot";
   }
 
   @override
@@ -99,7 +99,7 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("TVOC Visualization")),
+      appBar: AppBar(title: Text("Temperature Visualization")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -107,19 +107,19 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: getTVOCColor(),
+                color: getTemperatureColor(),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
-                  Text("Current TVOC",
+                  Text("Current Temperature",
                       style: TextStyle(fontSize: 18, color: Colors.white)),
-                  Text("${currentTVOC.toStringAsFixed(1)} ppb",
+                  Text("${currentTemperature.toStringAsFixed(1)} °C",
                       style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Colors.white)),
-                  Text(getTVOCStatus(),
+                  Text(getTemperatureStatus(),
                       style: TextStyle(fontSize: 20, color: Colors.white)),
                 ],
               ),
@@ -129,23 +129,23 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
               child: SfRadialGauge(
                 axes: <RadialAxis>[
                   RadialAxis(
-                    minimum: 0,
-                    maximum: 500,
+                    minimum: -10,
+                    maximum: 50,
                     ranges: [
                       GaugeRange(
-                          startValue: 0, endValue: 150, color: Colors.green),
+                          startValue: -10, endValue: 15, color: Colors.blue),
                       GaugeRange(
-                          startValue: 150, endValue: 300, color: Colors.yellow),
+                          startValue: 15, endValue: 30, color: Colors.green),
                       GaugeRange(
-                          startValue: 300, endValue: 500, color: Colors.red),
+                          startValue: 30, endValue: 50, color: Colors.red),
                     ],
                     pointers: <GaugePointer>[
-                      NeedlePointer(value: currentTVOC),
+                      NeedlePointer(value: currentTemperature),
                     ],
                     annotations: <GaugeAnnotation>[
                       GaugeAnnotation(
                         widget: Text(
-                          '$currentTVOC ppb',
+                          '$currentTemperature °C',
                           style: TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold),
                         ),
@@ -160,10 +160,12 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
             Expanded(
               child: LineChart(
                 LineChartData(
-                  minX: tvocData.isNotEmpty ? tvocData.first.x : 0,
-                  maxX: tvocData.isNotEmpty ? tvocData.last.x : 10,
-                  minY: 0,
-                  maxY: 500,
+                  minX:
+                      temperatureData.isNotEmpty ? temperatureData.first.x : 0,
+                  maxX:
+                      temperatureData.isNotEmpty ? temperatureData.last.x : 10,
+                  minY: -10,
+                  maxY: 50,
                   gridData: FlGridData(show: false),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
@@ -177,13 +179,13 @@ class _TVOCDashboardState extends State<TVOCDashboard> {
                       show: true, border: Border.all(color: Colors.black)),
                   lineBarsData: [
                     LineChartBarData(
-                      spots: tvocData,
+                      spots: temperatureData,
                       isCurved: true,
-                      color: Colors.blue,
+                      color: Colors.orange,
                       barWidth: 3,
                       isStrokeCapRound: true,
                       belowBarData: BarAreaData(
-                          show: true, color: Colors.blue.withOpacity(0.3)),
+                          show: true, color: Colors.orange.withOpacity(0.3)),
                     ),
                   ],
                 ),

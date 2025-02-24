@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
@@ -8,7 +10,8 @@ class Eco2VisualizationScreen extends StatefulWidget {
   const Eco2VisualizationScreen({super.key});
 
   @override
-  State<Eco2VisualizationScreen> createState() => _Eco2VisualizationScreenState();
+  State<Eco2VisualizationScreen> createState() =>
+      _Eco2VisualizationScreenState();
 }
 
 class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
@@ -23,19 +26,28 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
     mqttService = MQTTService();
     mqttService.connectAndSubscribe();
 
-    mqttService.client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
+    mqttService.client.updates!
+        .listen((List<MqttReceivedMessage<MqttMessage>> messages) {
       final recMsg = messages[0].payload as MqttPublishMessage;
-      final payload = MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
-      final eco2Value = double.tryParse(payload) ?? 400;
+      final payload =
+          MqttPublishPayload.bytesToStringAsString(recMsg.payload.message);
 
-      setState(() {
-        currentEco2 = eco2Value;
-        eco2History.add(FlSpot(timeCounter.toDouble(), currentEco2));
-        if (eco2History.length > 20) {
-          eco2History.removeAt(0);
-        }
-        timeCounter++;
-      });
+      try {
+        final jsonData = jsonDecode(payload); // Convert string to JSON object
+        final eco2Value =
+            jsonData['eco2']?.toDouble() ?? 400; // Extract eCO2 value
+
+        setState(() {
+          currentEco2 = eco2Value;
+          eco2History.add(FlSpot(timeCounter.toDouble(), currentEco2));
+          if (eco2History.length > 20) {
+            eco2History.removeAt(0);
+          }
+          timeCounter++;
+        });
+      } catch (e) {
+        print("❌ JSON Parsing Error: $e");
+      }
     });
   }
 
@@ -62,18 +74,27 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
                     minimum: 400,
                     maximum: 2000,
                     ranges: [
-                      GaugeRange(startValue: 400, endValue: 800, color: Colors.green),
-                      GaugeRange(startValue: 800, endValue: 1200, color: Colors.orange),
-                      GaugeRange(startValue: 1200, endValue: 2000, color: Colors.red),
+                      GaugeRange(
+                          startValue: 400, endValue: 800, color: Colors.green),
+                      GaugeRange(
+                          startValue: 800,
+                          endValue: 1200,
+                          color: Colors.orange),
+                      GaugeRange(
+                          startValue: 1200, endValue: 2000, color: Colors.red),
                     ],
                     pointers: [
-                      NeedlePointer(value: currentEco2, enableAnimation: true, needleColor: getEco2Color(currentEco2))
+                      NeedlePointer(
+                          value: currentEco2,
+                          enableAnimation: true,
+                          needleColor: getEco2Color(currentEco2))
                     ],
                     annotations: [
                       GaugeAnnotation(
                         widget: Text(
                           '${currentEco2.toStringAsFixed(0)} ppm',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         angle: 90,
                         positionFactor: 0.5,
@@ -91,8 +112,10 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
               child: LineChart(
                 LineChartData(
                   titlesData: FlTitlesData(
-                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
-                    bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                    leftTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                    bottomTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: true)),
                   ),
                   lineBarsData: [
                     LineChartBarData(
@@ -100,7 +123,9 @@ class _Eco2VisualizationScreenState extends State<Eco2VisualizationScreen> {
                       isCurved: true,
                       color: getEco2Color(currentEco2),
                       barWidth: 4,
-                      belowBarData: BarAreaData(show: true, color: getEco2Color(currentEco2).withOpacity(0.3)),
+                      belowBarData: BarAreaData(
+                          show: true,
+                          color: getEco2Color(currentEco2).withOpacity(0.3)),
                     ),
                   ],
                   borderData: FlBorderData(show: true),
