@@ -39,3 +39,4 @@ Using the **ESP32 microcontroller**, sensor readings are transmitted to an **MQT
 - **EMQX MQTT Broker** – Handles real-time communication between ESP32 and the backend.
 
 ### Circuit Diagram
+![Circuit Image](assets/images/circuit.jpeg)
