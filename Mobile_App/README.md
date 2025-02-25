@@ -10,6 +10,13 @@ This Flutter-based mobile application provides an interactive user interface for
 - **Temperature Monitoring**: Provides real-time temperature data with comfort level classification.
 - **TVOC Detection**: Monitors total volatile organic compounds and categorizes air quality.
 
+### Software Requirements
+- **PlatformIO**: For ESP32 programming.
+- **Python**: For data flow simulation.
+- **Flutter**: For mobile app development.
+- **VSCode**: As the code editor.
+- **EMQX MQTT Broker**: For real-time data communication.
+
 ## User Interfaces
 
 ### 1. Dashboard
