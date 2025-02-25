@@ -24,14 +24,13 @@ class _HumidityPageState extends State<HumidityPage> {
       },
       onError: (error) {
         print("MQTT Error: $error");
-        // Handle error as needed
       },
     );
   }
   
 
    void _updateHumidity(Map<String, dynamic> data) {
-    final humidityValue = data['humidity']?.toDouble() ?? 50; // Get humidity from data
+    final humidityValue = data['humidity']?.toDouble() ?? 50; 
     setState(() {
       currentHumidity = humidityValue;
       humidityData.add(FlSpot(time.toDouble(), currentHumidity));
@@ -57,7 +56,7 @@ class _HumidityPageState extends State<HumidityPage> {
 
    @override
   void dispose() {
-    _mqttSubscription.cancel(); // Cancel the subscription
+    _mqttSubscription.cancel(); 
     super.dispose();
   }
 

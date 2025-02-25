@@ -17,7 +17,6 @@ class HomeViewModel extends ChangeNotifier {
       },
       onError: (error) {
         print("MQTT Error in HomeViewModel: $error");
-        // Handle error as needed
       },
     );
   }
@@ -42,7 +41,7 @@ class HomeViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _mqttSubscription.cancel();  // Important: Cancel the subscription
+    _mqttSubscription.cancel();  
     super.dispose();
   }
 }
