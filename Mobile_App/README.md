@@ -34,3 +34,7 @@ This screen provides real-time temperature readings in degrees Celsius (°C) alo
 
 ### 5. Total Volatile Organic Compounds (TVOC)
 The TVOC interface monitors indoor air pollution by displaying real-time TVOC levels in parts per billion (ppb). A green display at the top highlights the current TVOC level with an air quality classification (e.g., "Good"). A line graph below visualizes TVOC fluctuations over time, helping users identify potential sources of pollution from household products and take preventive measures.
+
+### 6. Circuit Image
+![Circuit Image](assets/images/circuit.jpeg)
+
