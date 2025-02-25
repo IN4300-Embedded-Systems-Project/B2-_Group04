@@ -17,6 +17,17 @@ This Flutter-based mobile application provides an interactive user interface for
 - **VSCode**: As the code editor.
 - **EMQX MQTT Broker**: For real-time data communication.
 
+### Hardware Requirements
+- **ESP32 Microcontroller**: For data acquisition and transmission.
+- **ENS160 Sensor**: Measures eCO₂ and TVOC levels.
+- **AHT21 Sensor**: Measures temperature and humidity.
+- **Power Supply**: 5V power adapter or battery pack for the ESP32.
+- **Jumper Wires**: For connecting sensors.
+- **Breadboard**: For circuit assembly.
+- **Wi-Fi Module**: Built into the ESP32 for communication.
+- **Casing/Enclosure**: For protecting the device.
+- **LED Indicators**: To indicate status.
+
 ## User Interfaces
 
 ### 1. Dashboard
