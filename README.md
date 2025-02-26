@@ -11,12 +11,15 @@ This project, developed by **SyncCore**, aims to create an IoT-based **Indoor Ai
 
 Using the **ESP32 microcontroller**, sensor readings are transmitted to an **MQTT-based backend server** over Wi-Fi. The collected data is processed, analyzed, and displayed on a **real-time dashboard**, allowing users to monitor air quality trends and take action when necessary.
 
-### Features
+#### **Features**
 - **Real-time Monitoring:** Continuously tracks and updates air quality parameters.
 - **Interactive Dashboard:** Displays data trends and alerts through an intuitive interface.
 - **IoT Connectivity:** Uses Wi-Fi and MQTT protocols for efficient communication.
 - **Scalability:** Can be extended with additional sensors and multiple locations.
 - **Instant Alerts:** Notifies users when air quality parameters exceed safe thresholds.
+
+#### **User Interfaces of Mobile App**
+![1](https://github.com/user-attachments/assets/7471ffee-0fed-4750-9ac8-9394ecb09484)
 
 ### Components Used
 
@@ -38,4 +41,10 @@ Using the **ESP32 microcontroller**, sensor readings are transmitted to an **MQT
 - **Visual Studio Code (VS Code)** – IDE for software development.
 - **EMQX MQTT Broker** – Handles real-time communication between ESP32 and the backend.
 
+### Circuit Diagrams
 
+#### **Circuit Diagram (Schematic)**
+<img src="https://github.com/user-attachments/assets/863b26f6-ab3c-4a45-af6a-68563d04a542" width="800"/>
+
+#### **Circuit Diagram (Pictorial)**
+<img src="https://github.com/user-attachments/assets/15b1fcc3-2502-492b-9d07-f529da4aede8" width="800"/>
