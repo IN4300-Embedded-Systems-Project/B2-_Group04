@@ -19,7 +19,8 @@ Using the **ESP32 microcontroller**, sensor readings are transmitted to an **MQT
 - **Instant Alerts:** Notifies users when air quality parameters exceed safe thresholds.
 
 #### **User Interfaces of Mobile App**
-![1](https://github.com/user-attachments/assets/7471ffee-0fed-4750-9ac8-9394ecb09484)
+![Untitled design(3)](https://github.com/user-attachments/assets/d8906666-6406-4601-b7f3-0ade05c05aff)
+
 
 ### Components Used
 
